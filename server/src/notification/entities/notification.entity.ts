@@ -10,7 +10,7 @@ export class Notification {
     @Column()
     message : string
 
-    @Column()
+    @Column({default: true})
     isRead : boolean
 
     @ManyToOne(() => User, user => user.n_sender)

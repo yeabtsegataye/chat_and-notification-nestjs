@@ -1,29 +1,63 @@
-import { WebSocketGateway, WebSocketServer, OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect, SubscribeMessage } from '@nestjs/websockets';
+import {
+  WebSocketGateway,
+  WebSocketServer,
+  OnGatewayInit,
+  OnGatewayConnection,
+  OnGatewayDisconnect,
+  SubscribeMessage,
+} from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { JwtService, TokenExpiredError } from '@nestjs/jwt';
 
-interface Client {
+interface user {
   id: string;
-  socket: Socket;
 }
 
-@WebSocketGateway({ cors: '*' })//OnGatewayInit
-export class NotificationGateway implements  OnGatewayConnection, OnGatewayDisconnect {
+interface messaging extends user {
+  socketId: string;
+}
 
+@WebSocketGateway({ cors: '*' }) //OnGatewayInit
+export class NotificationGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server: Server;
 
-  private clients = new Map<string, Client>(); // Map to store clients
+  messaging = new Map<string, messaging>();
 
-  constructor() { }
+  constructor(private readonly jwt: JwtService) {}
 
   handleConnection(client: Socket) {
+    const token = client.handshake.headers.authorization?.split(' ')[1];
+    if (!token) {
+      client.disconnect(true);
+      console.log('Returned');
+      return;
+    }
+    try {
+      const payload = this.jwt.verify(token);
+     
+        this.messaging.set(payload.id, {
+          ...payload,
+          socketId: client.id,
+        });
+      
+    } catch (error) {
+      if (error instanceof TokenExpiredError) {
+        console.log('Token expired');
+      } else {
+        console.error('Error verifying token:', error);
+      }
+      return;
+    }
     console.log(`Client connected: ${client.id}`);
-    this.clients.set(client.id, { id: client.id, socket: client }); // Store the client
+    // this.clients.set(client.id, { id: client.id, socket: client }); // Store the client
   }
 
   handleDisconnect(client: Socket) {
     console.log(`Client disconnected: ${client.id}`);
-    this.clients.delete(client.id); // Remove the client on disconnect
+    this.messaging.delete(client.id); // Remove the client on disconnect
   }
 
   afterInit(server: Server) {
@@ -37,29 +71,37 @@ export class NotificationGateway implements  OnGatewayConnection, OnGatewayDisco
   }
 
   @SubscribeMessage('sendMessage')
-  handleSendMessage(client: Socket, payload: { roomId: string, message: any }) {
+  handleSendMessage(client: Socket, payload: { roomId: string; message: any }) {
     const { roomId } = payload;
-    console.log(`Sending message "${payload.message.message }" to room ${roomId}`);
-    
+    console.log(
+      `Sending message "${payload.message.message}" to room ${roomId}`,
+    );
+
     // Emit the message to all clients in the specified room
     this.server.to(roomId).emit('message', payload.message);
   }
 
   @SubscribeMessage('notification')
-  handleNotification(client: Socket, payload: { message: any }) {
+  handleNotification(client: Socket, payload: {message: any }) {
     const { message } = payload;
-    
+
     // Check if the sender exists in the clients map
-    if (this.clients.has(message.receiver)) {
-      console.log(message.receiver, "receiver")
-      // Retrieve the socket of the recipient
-      const recipientSocket = this.clients.get(message.receiver).socket;
-  console.log(recipientSocket,"resipiacnt")
-      // Emit the notification to the recipient
-      recipientSocket.emit('getNotification', message);
+    if (this.messaging.has(message.N_receiver)) {
+      console.log(message, 'receiver');
+      // Retrieve the recipient's client object from the map
+      const recipientClient = this.messaging.get(message.N_receiver);
+      console.log(recipientClient, 'recipientClient');
+
+      // Emit the notification to the recipient's socket
+      if (recipientClient) {
+        this.server
+          .to(recipientClient.socketId)
+          .emit("Gnotification", message);
+      } else {
+        console.log(`Client with ID ${message.N_receiver} not found.`);
+      }
     } else {
       console.log(`Client with ID ${message.receiver} not found.`);
     }
   }
-  
 }
