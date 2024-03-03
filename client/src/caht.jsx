@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import io from 'socket.io-client';
-
 var socket;
+const token = JSON.parse(localStorage.getItem('access_token'));
 
 function Chat() {
-  const token = localStorage.getItem('access_token');
-  const { access_token } = JSON.parse(token);
+  const { access_token } = token;
 
+  const [roomId, setRoomId] = useState('')
   const [selectedUser, setSelectedUser] = useState(null);
   const [users, setUsers] = useState([]);
   const [message, setMessage] = useState('');
@@ -25,38 +25,51 @@ function Chat() {
       },
     });
   
-    socket.on('notification', (data)=>{
-      setNotification([data])
-      setNotificationCount(data.length); // Update notification count dynamically
+    socket.on('getNotification', (data) => {
+      setNotification((prevNotifications) => [...prevNotifications, data]); // Append new notification to the existing array
+      setNotificationCount((prevCount) => prevCount + 1); // Increment notification count
     });
   
-    socket.on('sendMessage', (message) => {
-      console.log('Received message:', message);
-      setMessages((prevMessages) => [...prevMessages, message]);
-    });
-
+    // Add event listener for 'message' event only if it's not already added
+      socket.on('message', (message) => {
+        console.log('Received message:', message);
+        setMessages((prevMessages) => [...prevMessages, message]);
+      });
+    
     return () => {
+      socket.off('notification');
       socket.off('message');
     };
   }, []);
+  
+  
 
   const handleUserClick = async (user) => {
     setSelectedUser(user);
-    console.log(user.id, "user id")
-    try {
-      const tokens = JSON.parse(localStorage.getItem('access_token'));
-      console.log(tokens.id,"token id")
+   try {
       const response = await axios.post('http://localhost:3000/chat', {
-        sender: tokens.id,
+        sender: token.id,
         receiver: user.id,
       });
-           console.log(response)
-
       const c_id = response.data.id;
+       setRoomId(c_id)
       socket.emit('joinRoom', c_id);
     } catch (error) {
       console.error('Error creating chat room:', error);
     }
+    try {
+      // console.log(message, token.id ,selectedUser.id)
+      const msg = await axios.post('http://localhost:3000/message/get',
+      {
+        sender: token.id,
+        receiver: user.id,
+      })
+      console.log(msg.data)
+      setMessages( msg.data);
+      console.log(messages)
+     } catch (error) {
+      console.log("error while sending message",error)
+     }
   };
 
   const handleSearch = async () => {
@@ -79,10 +92,24 @@ function Chat() {
     setShowDropdown(!showDropdown);
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async() => {
     if (!selectedUser) return; // Check if a user is selected
-    socket.emit('sendMessage', { userId: selectedUser.id, message });
+    
+   try {
+    // console.log(message, token.id ,selectedUser.id)
+    const msg = await axios.post('http://localhost:3000/message/add',
+    {
+      message ,
+      sender: token.id,
+      receiver: selectedUser.id,
+    })
+     const data = msg.data
+    socket.emit('sendMessage', { roomId, message: data});
     setMessage('');
+    socket.emit('notification',{ message: data})
+   } catch (error) {
+    console.log("error while sending message",error)
+   }
   };
 
   const handleClickOutside = (event) => {
@@ -165,10 +192,11 @@ function Chat() {
             <div className="card-header">Chat</div>
             <div className="card-body chat-box" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
               {/* Display messages */}
-              {messages.map((msg, index) => (
-                <div className="message" key={index}>
-                  <p>{msg}</p>
-                </div>
+              {messages.map((msg) => (
+                <div className="message" key={msg.id} style={{ textAlign: msg.sender === token.id ? 'right' : 'left', color: msg.sender === token.id ? 'blue' : 'green' }}>
+                <p>{msg.message}</p>
+              </div>
+              
               ))}
             </div>
             {/* Input field for sending messages */}

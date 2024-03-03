@@ -7,11 +7,14 @@ import { UpdateMessageDto } from './dto/update-message.dto';
 export class MessageController {
   constructor(private readonly messageService: MessageService) {}
 
-  @Post()
+  @Post('add')
   create(@Body() createMessageDto: CreateMessageDto) {
     return this.messageService.create(createMessageDto);
   }
-
+  @Post('get')
+  Get_message(@Body() createMessageDto: CreateMessageDto) {
+    return this.messageService.Get_message(createMessageDto);
+  }
   @Get()
   findAll() {
     return this.messageService.findAll();

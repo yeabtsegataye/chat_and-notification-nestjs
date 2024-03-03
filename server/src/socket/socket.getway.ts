@@ -1,5 +1,4 @@
-// notification.gateway.ts
-import { WebSocketGateway, WebSocketServer, OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect } from '@nestjs/websockets';
+import { WebSocketGateway, WebSocketServer, OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect, SubscribeMessage } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 
 interface Client {
@@ -7,15 +6,15 @@ interface Client {
   socket: Socket;
 }
 
-@WebSocketGateway({cors : '*'})
-export class NotificationGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
+@WebSocketGateway({ cors: '*' })//OnGatewayInit
+export class NotificationGateway implements  OnGatewayConnection, OnGatewayDisconnect {
 
   @WebSocketServer()
   server: Server;
 
   private clients = new Map<string, Client>(); // Map to store clients
 
-  constructor() {}
+  constructor() { }
 
   handleConnection(client: Socket) {
     console.log(`Client connected: ${client.id}`);
@@ -31,12 +30,36 @@ export class NotificationGateway implements OnGatewayInit, OnGatewayConnection, 
     console.log('WebSocket Gateway initialized');
   }
 
-  public sendMessageToClient(clientId: string, message: string) {
-    const client = this.clients.get(clientId);
-    if (client) {
-      client.socket.emit('notification', message);
+  @SubscribeMessage('joinRoom')
+  handleJoinRoom(client: Socket, c_id: string) {
+    console.log(`Client ${client.id} joining room ${c_id}`);
+    client.join(c_id); // Join the room specified by c_id
+  }
+
+  @SubscribeMessage('sendMessage')
+  handleSendMessage(client: Socket, payload: { roomId: string, message: any }) {
+    const { roomId } = payload;
+    console.log(`Sending message "${payload.message.message }" to room ${roomId}`);
+    
+    // Emit the message to all clients in the specified room
+    this.server.to(roomId).emit('message', payload.message);
+  }
+
+  @SubscribeMessage('notification')
+  handleNotification(client: Socket, payload: { message: any }) {
+    const { message } = payload;
+    
+    // Check if the sender exists in the clients map
+    if (this.clients.has(message.receiver)) {
+      console.log(message.receiver, "receiver")
+      // Retrieve the socket of the recipient
+      const recipientSocket = this.clients.get(message.receiver).socket;
+  console.log(recipientSocket,"resipiacnt")
+      // Emit the notification to the recipient
+      recipientSocket.emit('getNotification', message);
     } else {
-      console.log(`Client with ID ${clientId} not found.`);
+      console.log(`Client with ID ${message.receiver} not found.`);
     }
   }
+  
 }
