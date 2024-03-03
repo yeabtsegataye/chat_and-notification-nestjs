@@ -159,48 +159,34 @@ function Chat() {
             <div className="card-header d-flex justify-content-between align-items-center">
               <span>{token.id}</span>
               {/* Notification button */}
-              <div className="dropdown d-inline-block">
-                <button
-                  className="btn btn-link"
-                  id="notification-tab"
-                  onClick={handleNotificationClick}
+              <div class="dropdown">
+                <a
+                  class=" dropdown-toggle"
+                  href="#"
+                  role="button"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                  onClick={() => setNotificationCount(0)}
                 >
-                  {/* Notification icon */}
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    fill="currentColor"
-                    className="bi bi-bell"
-                    viewBox="0 0 16 16"
-                  >
-                    <path d="M8 16a1.5 1.5 0 0 0 1.5-1.5h-3A1.5 1.5 0 0 0 8 16z" />
-                    <path
-                      fillRule="evenodd"
-                      d="M8 1.5A2.5 2.5 0 0 0 5.5 4V5H3.495a.5.5 0 0 0-.36.843l1.935 1.89v5.428a1 1 0 0 0 1 1h3.13a2.501 2.501 0 0 0 4.75 0h3.131a1 1 0 0 0 1-1V7.733l1.935-1.89a.5.5 0 0 0-.36-.843H13V4a2.5 2.5 0 0 0-2.5-2.5h-3zm.5 11.5a1 1 0 0 1-1 1h-3a1 1 0 0 1-1-1v-5.142L1.698 5.152A.5.5 0 0 1 2.06 4h11.88a.5.5 0 0 1 .362.152L8.5 8.857v5.143z"
-                    />
-                  </svg>
-                  {/* Notification count */}
-                  {notificationCount > 0 && (
-                    <span className="badge bg-danger">{notificationCount}</span>
-                  )}
-                </button>
-                <ul
-                  className={`dropdown-menu dropdown-menu-end ${
-                    showDropdown ? "show" : ""
-                  }`}
-                  aria-labelledby="notification-tab"
-                  ref={dropdownRef}
-                >
-                  {notification.map((notif) => (
-                    <li key={notif.id}>
-                      <a className="dropdown-item" href="#">
-                        {notif.message}
-                      </a>
-                    </li>
-                  ))}
+                  <a href="" class="text-dark">
+                    <i class="fa-solid fa-bell"></i>
+                    <span class="badge rounded-pill badge-notification bg-danger">
+                      {notificationCount}
+                    </span>
+                  </a>
+                </a>
+                <ul class="dropdown-menu">
+                  {notification &&
+                    notification.map((notif) => (
+                      <li key={notif.id}>
+                        <a class="dropdown-item" href="#">
+                          new {notif.message}
+                        </a>
+                      </li>
+                    ))}
                 </ul>
               </div>
+              {/* notifiaction end */}
             </div>
             <div className="card-body">
               <div className="input-group mb-3">
