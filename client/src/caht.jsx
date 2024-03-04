@@ -15,9 +15,25 @@ function Chat() {
   const [messages, setMessages] = useState([]);
   const [notification, setNotification] = useState([]);
   const [notificationCount, setNotificationCount] = useState(0); // Initial notification count
-  const [showDropdown, setShowDropdown] = useState(false); // State to control dropdown visibility
-  const dropdownRef = useRef(null); // Ref for the dropdown element
+  const [hoveredIcons, setHoveredIcons] = useState([]);
+  const chatBoxRef = useRef(null); // Ref for the chat box element
 
+  const handleMouseEnter = (index) => {
+    setHoveredIcons((prevIcons) => {
+      const newIcons = [...prevIcons];
+      newIcons[index] = true;
+      return newIcons;
+    });
+  };
+  /////////////////
+  const handleMouseLeave = (index) => {
+    setHoveredIcons((prevIcons) => {
+      const newIcons = [...prevIcons];
+      newIcons[index] = false;
+      return newIcons;
+    });
+  };
+  //////////////
   useEffect(() => {
     socket = io("http://localhost:3000/", {
       extraHeaders: {
@@ -29,10 +45,19 @@ function Chat() {
     // Add event listener for 'message' event only if it's not already added
     socket.on("message", (message) => {
       setMessages((prevMessages) => [...prevMessages, message]);
+      // Scroll the chat box to the bottom
+      chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
+    });
+    socket.on("Gnotification", (data) => {
+      setNotification((prevNotifications) => [...prevNotifications, data]);
+      setNotificationCount((prevCount) => {
+        const newCount = prevCount + 1;
+        return newCount;
+      });
     });
 
     return () => {
-      // socket.off("notification");
+      socket.off("Gnotification");
       socket.off("message");
     };
   }, []);
@@ -48,20 +73,15 @@ function Chat() {
       console.log(get_notif.data, " get");
       // console.log(get_notif.data.length, "length")
       setNotificationCount(get_notif.data.length);
-      setNotification((prevNotif) => [...prevNotif, get_notif.data]);
+      setNotification(get_notif.data);
+      console.log(notification, "notification");
     } catch (error) {
       console.log(error, "errossss");
     }
   };
-  /////////////////
-  useEffect(() => {
-    socket.on("Gnotification", (data) => {
-      console.log(data, "the data");
-      setNotification((prevNotifications) => [...prevNotifications, data]);
-    });
-  }, []);
   ///////////////
   const handleUserClick = async (user) => {
+    console.log(user, "11");
     setSelectedUser(user);
     try {
       const response = await axios.post("http://localhost:3000/chat", {
@@ -85,7 +105,7 @@ function Chat() {
       console.log("error while sending message", error);
     }
   };
-
+  //////////////
   const handleSearch = async () => {
     try {
       const response = await axios.get("http://localhost:3000/user/", {
@@ -96,30 +116,6 @@ function Chat() {
       setUsers(response.data);
     } catch (error) {
       console.error("Error fetching users:", error);
-    }
-  };
-  ////////////
-  const handleNotificationClick = () => {
-    // Reset notification count when clicked
-    setNotificationCount(0);
-    // Toggle dropdown visibility
-    setShowDropdown(!showDropdown);
-  };
-  ////////////
-  useEffect(() => {
-    // Attach click event listener to the document
-    document.addEventListener("click", handleClickOutside);
-
-    // Cleanup the event listener on component unmount
-    return () => {
-      document.removeEventListener("click", handleClickOutside);
-    };
-  }, []);
-  /////////
-  const handleClickOutside = (event) => {
-    // Close dropdown when clicking outside
-    if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-      setShowDropdown(false);
     }
   };
   ///////////
@@ -147,7 +143,25 @@ function Chat() {
       console.log("error while sending message", error);
     }
   };
-
+  /////////////////////
+  const handle_delete = async (id) => {
+    const Dnotif = await axios.delete(
+      `http://localhost:3000/notification/${id}`
+    );
+    if (Dnotif) {
+      const N = notification.filter((item) => id !== item.id);
+      setNotification(N);
+    }
+  };
+  ////////////////////
+  const handle_goTo_notif = async (user) => {
+    console.log(user, "uses");
+    console.log(users, "exist user");
+    const find_user = users.filter((index) => index.id === user.N_sender);
+    console.log(find_user[0], "find user");
+    handleUserClick(find_user[0]);
+  };
+  ////////////////
   return (
     <div className="container">
       <div className="row">
@@ -161,15 +175,15 @@ function Chat() {
               {/* Notification button */}
               <div class="dropdown">
                 <a
-                  class=" dropdown-toggle"
+                  class="dropdown-toggle"
                   href="#"
                   role="button"
                   data-bs-toggle="dropdown"
                   aria-expanded="false"
-                  onClick={() => setNotificationCount(0)}
+                  onClick={() => setNotificationCount("")}
                 >
-                  <a href="" class="text-dark">
-                    <i class="fa-solid fa-bell"></i>
+                  <a href="" class="text-dark d-flex align-items-center">
+                    <i class="fa-solid fa-bell mr-2"></i>
                     <span class="badge rounded-pill badge-notification bg-danger">
                       {notificationCount}
                     </span>
@@ -177,15 +191,28 @@ function Chat() {
                 </a>
                 <ul class="dropdown-menu">
                   {notification &&
-                    notification.map((notif) => (
-                      <li key={notif.id}>
-                        <a class="dropdown-item" href="#">
-                          new {notif.message}
+                    notification.map((notif, index) => (
+                      <li
+                        key={notif.id}
+                        onClick={() => handle_goTo_notif(notif)}
+                      >
+                        <a class="dropdown-item d-flex justify-content-between align-items-center">
+                          <span>new {notif.message}</span>
+                          <i
+                            className="fa-solid fa-xmark delete-icon"
+                            style={{
+                              color: hoveredIcons[index] ? "red" : "black",
+                            }}
+                            onMouseEnter={() => handleMouseEnter(index)}
+                            onMouseLeave={() => handleMouseLeave(index)}
+                            onClick={() => handle_delete(notif.id)}
+                          ></i>
                         </a>
                       </li>
                     ))}
                 </ul>
               </div>
+
               {/* notifiaction end */}
             </div>
             <div className="card-body">
@@ -227,53 +254,60 @@ function Chat() {
           </div>
         </div>
         <div className="col-md-8">
-          {/* Right Side - Chat Box */}
-          <div className="card">
-            <div className="card-header">Chat</div>
-            <div
-              className="card-body chat-box"
-              style={{ maxHeight: "60vh", overflowY: "auto" }}
-            >
-              {/* Display messages */}
-              {messages.map((msg) => (
-                <div
-                  className="message"
-                  key={msg.id}
-                  style={{
-                    textAlign: msg.sender === token.id ? "right" : "left",
-                    color: msg.sender === token.id ? "blue" : "green",
-                  }}
-                >
-                  <p>{msg.message}</p>
-                </div>
-              ))}
-            </div>
-            {/* Input field for sending messages */}
-            {selectedUser && (
-              <div className="card-footer">
-                <div className="input-group">
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Type your message"
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    aria-label="Type your message"
-                    aria-describedby="button-addon2"
-                  />
-                  <button
-                    className="btn btn-primary"
-                    type="button"
-                    id="button-addon2"
-                    onClick={handleSendMessage}
-                  >
-                    Send
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+  {/* Right Side - Chat Box */}
+  <div
+    className="card"
+    style={{
+      maxHeight: "60vh",
+      overflowY: "auto",
+      display: "flex",
+      flexDirection: "column",
+    }}
+    ref={chatBoxRef}
+  >
+    <div className="card-header">Chat</div>
+    <div className="card-body chat-box" style={{ flex: "1", overflowY: "auto" }}>
+      {/* Display messages */}
+      {messages.map((msg) => (
+        <div
+          className="message"
+          key={msg.id}
+          style={{
+            textAlign: msg.sender === token.id ? "right" : "left",
+            color: msg.sender === token.id ? "blue" : "green",
+          }}
+        >
+          <p>{msg.message}</p>
         </div>
+      ))}
+    </div>
+    {/* Input field for sending messages */}
+    {selectedUser && (
+      <div className="card-footer">
+        <div className="input-group">
+          <input
+            type="text"
+            className="form-control"
+            placeholder="Type your message"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            aria-label="Type your message"
+            aria-describedby="button-addon2"
+          />
+          <button
+            className="btn btn-primary"
+            type="button"
+            id="button-addon2"
+            onClick={handleSendMessage}
+          >
+            Send
+          </button>
+        </div>
+      </div>
+    )}
+  </div>
+</div>
+
       </div>
     </div>
   );

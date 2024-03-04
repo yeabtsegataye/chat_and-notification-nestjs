@@ -68,7 +68,27 @@ export class NotificationService {
     return `This action updates a #${id} notification`;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} notification`;
+  async remove(id: number) {
+    try {
+      // Execute the deletion query, handling potential errors
+      const deleteResult = await this.notificationRepository
+        .createQueryBuilder('notification')
+        .where('id = :id', { id })
+        .delete()
+        .execute();
+  
+      // Check if any notifications were actually deleted
+      if (deleteResult.affected === 0) {
+        console.log(`Notification with ID ${id} not found. No deletions performed.`);
+        return `No notification with ID ${id} found.`; // Inform the caller
+      } else {
+        console.log(`${deleteResult.affected} notification(s) deleted successfully.`);
+        return `Removed notification(s) with ID(s): ${id}`; // Inform the caller
+      }
+    } catch (error) {
+      console.error(`Error deleting notification with ID ${id}:`, error);
+      throw error; // Re-throw the error for proper handling
+    }
   }
+  
 }
