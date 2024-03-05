@@ -44,6 +44,7 @@ function Chat() {
 
     // Add event listener for 'message' event only if it's not already added
     socket.on("message", (message) => {
+      console.log(message, "ebent");
       setMessages((prevMessages) => [...prevMessages, message]);
       // Scroll the chat box to the bottom
       chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
@@ -70,18 +71,18 @@ function Chat() {
           id: token.id,
         }
       );
-      console.log(get_notif.data, " get");
+      // console.log(get_notif.data, " get");
       // console.log(get_notif.data.length, "length")
       setNotificationCount(get_notif.data.length);
       setNotification(get_notif.data);
-      console.log(notification, "notification");
+      // console.log(notification, "notification");
     } catch (error) {
       console.log(error, "errossss");
     }
   };
   ///////////////
   const handleUserClick = async (user) => {
-    console.log(user, "11");
+    // console.log(user, "11");
     setSelectedUser(user);
     try {
       const response = await axios.post("http://localhost:3000/chat", {
@@ -100,6 +101,7 @@ function Chat() {
         sender: token.id,
         receiver: user.id,
       });
+      console.log(msg.data, "fetched");
       setMessages(msg.data);
     } catch (error) {
       console.log("error while sending message", error);
@@ -129,15 +131,15 @@ function Chat() {
         sender: token.id,
         receiver: selectedUser.id,
       });
-      const data = msg.data;
-      socket.emit("sendMessage", { roomId, message: data });
+      // const data = msg.data;
+      // socket.emit("sendMessage", { roomId, message: data });
       setMessage("");
       const notif = await axios.post("http://localhost:3000/notification/add", {
         message,
         sender: token.id,
         receiver: selectedUser.id,
       });
-      console.log(notif.data, "add, notif");
+      // console.log(notif.data, "add, notif");
       socket.emit("notification", { message: notif.data });
     } catch (error) {
       console.log("error while sending message", error);
@@ -155,10 +157,10 @@ function Chat() {
   };
   ////////////////////
   const handle_goTo_notif = async (user) => {
-    console.log(user, "uses");
-    console.log(users, "exist user");
+    // console.log(user, "uses");
+    // console.log(users, "exist user");
     const find_user = users.filter((index) => index.id === user.N_sender);
-    console.log(find_user[0], "find user");
+    // console.log(find_user[0], "find user");
     handleUserClick(find_user[0]);
   };
   ////////////////
@@ -173,30 +175,30 @@ function Chat() {
             <div className="card-header d-flex justify-content-between align-items-center">
               <span>{token.id}</span>
               {/* Notification button */}
-              <div class="dropdown">
+              <div className="dropdown">
                 <a
-                  class="dropdown-toggle"
+                  className="dropdown-toggle"
                   href="#"
                   role="button"
                   data-bs-toggle="dropdown"
                   aria-expanded="false"
                   onClick={() => setNotificationCount("")}
                 >
-                  <a href="" class="text-dark d-flex align-items-center">
-                    <i class="fa-solid fa-bell mr-2"></i>
-                    <span class="badge rounded-pill badge-notification bg-danger">
+                  <a href="" className="text-dark d-flex align-items-center">
+                    <i className="fa-solid fa-bell mr-2"></i>
+                    <span className="badge rounded-pill badge-notification bg-danger">
                       {notificationCount}
                     </span>
                   </a>
                 </a>
-                <ul class="dropdown-menu">
+                <ul className="dropdown-menu">
                   {notification &&
                     notification.map((notif, index) => (
                       <li
                         key={notif.id}
                         onClick={() => handle_goTo_notif(notif)}
                       >
-                        <a class="dropdown-item d-flex justify-content-between align-items-center">
+                        <a className="dropdown-item d-flex justify-content-between align-items-center">
                           <span>new {notif.message}</span>
                           <i
                             className="fa-solid fa-xmark delete-icon"

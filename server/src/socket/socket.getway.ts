@@ -8,6 +8,7 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { JwtService, TokenExpiredError } from '@nestjs/jwt';
+import { Injectable } from '@nestjs/common';
 
 interface user {
   id: string;
@@ -16,8 +17,8 @@ interface user {
 interface messaging extends user {
   socketId: string;
 }
-
-@WebSocketGateway({ cors: '*' }) //OnGatewayInit
+@Injectable()
+@WebSocketGateway({ cors: '*' }) //OnGatewayInit  
 export class NotificationGateway
   implements OnGatewayConnection, OnGatewayDisconnect
 {
@@ -71,14 +72,16 @@ export class NotificationGateway
   }
 
   @SubscribeMessage('sendMessage')
-  handleSendMessage(client: Socket, payload: { roomId: string; message: any }) {
-    const { roomId } = payload;
+  handleSendMessage(payload: { roomId: any, message: any }) {
+    const { roomId,message } = payload;
+    console.log(roomId, message,'12qw' );
+    
     console.log(
-      `Sending message "${payload.message.message}" to room ${roomId}`,
+      `Sending message "${message}" to room ${roomId}`,
     );
 
     // Emit the message to all clients in the specified room
-    this.server.to(roomId).emit('message', payload.message);
+    this.server.to(roomId).emit('message', message);
   }
 
   @SubscribeMessage('notification')

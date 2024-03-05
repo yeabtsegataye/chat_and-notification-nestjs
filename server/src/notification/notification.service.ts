@@ -70,7 +70,7 @@ export class NotificationService {
 
   async remove(id: number) {
     try {
-      // Execute the deletion query, handling potential errors
+
       const deleteResult = await this.notificationRepository
         .createQueryBuilder('notification')
         .where('id = :id', { id })
@@ -78,7 +78,7 @@ export class NotificationService {
         .execute();
   
       // Check if any notifications were actually deleted
-      if (deleteResult.affected === 0) {
+      if (deleteResult.affected === 0) { 
         console.log(`Notification with ID ${id} not found. No deletions performed.`);
         return `No notification with ID ${id} found.`; // Inform the caller
       } else {
